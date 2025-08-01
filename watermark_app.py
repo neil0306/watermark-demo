@@ -10,6 +10,70 @@ class WatermarkProcessor:
     def __init__(self):
         self.supported_formats = ['.jpg', '.jpeg', '.png', '.tiff', '.tif', '.bmp', '.webp']
     
+    def convert_image_for_display(self, image):
+        """
+        将图像转换为适合在 Gradio 中显示的格式
+        """
+        if isinstance(image, Image.Image):
+            print(f"转换图像：原始模式={image.mode}, 格式={getattr(image, 'format', 'Unknown')}")
+            
+            # 处理各种图像模式
+            if image.mode == 'CMYK':
+                # CMYK 转 RGB
+                image = image.convert('RGB')
+                print("CMYK -> RGB 转换完成")
+            elif image.mode == 'L':
+                # 灰度转 RGB
+                image = image.convert('RGB')
+                print("灰度 -> RGB 转换完成")
+            elif image.mode == 'P':
+                # 调色板模式转 RGB
+                if 'transparency' in image.info:
+                    image = image.convert('RGBA').convert('RGB')
+                else:
+                    image = image.convert('RGB')
+                print("调色板 -> RGB 转换完成")
+            elif image.mode == '1':
+                # 1 位图像转 RGB
+                image = image.convert('RGB')
+                print("1 位图像 -> RGB 转换完成")
+            elif image.mode == 'LA':
+                # 灰度 + 透明度转 RGB
+                image = image.convert('RGBA').convert('RGB')
+                print("LA -> RGB 转换完成")
+            elif image.mode not in ['RGB', 'RGBA']:
+                # 其他模式统一转为 RGB
+                image = image.convert('RGB')
+                print(f"{image.mode} -> RGB 转换完成")
+            
+            print(f"最终模式：{image.mode}")
+                
+        return image
+    
+    def load_and_convert_image(self, image_path_or_pil):
+        """
+        加载并转换图像，确保兼容性
+        """
+        try:
+            if isinstance(image_path_or_pil, str):
+                # 从路径加载图像
+                image = Image.open(image_path_or_pil)
+            else:
+                # 已经是 PIL 图像
+                image = image_path_or_pil
+            
+            # 转换为显示格式
+            converted_image = self.convert_image_for_display(image)
+            
+            print(f"图像信息：模式={image.mode}, 尺寸={image.size}, 格式={getattr(image, 'format', 'Unknown')}")
+            print(f"转换后：模式={converted_image.mode}, 尺寸={converted_image.size}")
+            
+            return converted_image
+            
+        except Exception as e:
+            print(f"图像加载/转换错误：{e}")
+            raise e
+    
     def add_text_watermark(self, 
                             image: np.ndarray, 
                             text: str, 
@@ -236,11 +300,14 @@ def process_watermark(image, watermark_type, text_content, text_font_size, text_
         return None, "请先上传图片"
     
     try:
+        # 首先转换图像格式以确保兼容性
+        converted_image = processor.load_and_convert_image(image)
+        
         # 转换 PIL 图像为 OpenCV 格式
-        if isinstance(image, Image.Image):
-            opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        if isinstance(converted_image, Image.Image):
+            opencv_image = cv2.cvtColor(np.array(converted_image), cv2.COLOR_RGB2BGR)
         else:
-            opencv_image = image
+            opencv_image = converted_image
         
         # 获取图像尺寸用于限制位置参数
         height, width = opencv_image.shape[:2]
@@ -268,7 +335,7 @@ def process_watermark(image, watermark_type, text_content, text_font_size, text_
         
         if watermark_type == "文字水印":
             if not text_content.strip():
-                return image, "请输入水印文字"
+                return converted_image, "请输入水印文字"
             
             # 转换颜色格式 - 增强错误处理
             try:
@@ -322,13 +389,14 @@ def process_watermark(image, watermark_type, text_content, text_font_size, text_
         
         elif watermark_type == "图片水印":
             if watermark_image is None:
-                return image, "请上传水印图片"
+                return converted_image, "请上传水印图片"
             
-            # 转换水印图片为 OpenCV 格式
-            if isinstance(watermark_image, Image.Image):
-                watermark_cv = cv2.cvtColor(np.array(watermark_image), cv2.COLOR_RGB2BGR)
+            # 转换水印图片格式并转为 OpenCV 格式
+            converted_watermark = processor.load_and_convert_image(watermark_image)
+            if isinstance(converted_watermark, Image.Image):
+                watermark_cv = cv2.cvtColor(np.array(converted_watermark), cv2.COLOR_RGB2BGR)
             else:
-                watermark_cv = watermark_image
+                watermark_cv = converted_watermark
             
             result = processor.add_image_watermark(
                 opencv_image, watermark_cv, position, 
@@ -336,14 +404,19 @@ def process_watermark(image, watermark_type, text_content, text_font_size, text_
             )
         
         else:
-            return image, "请选择水印类型"
+            return converted_image, "请选择水印类型"
         
         # 转换回 PIL 格式用于显示
         result_pil = Image.fromarray(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
         return result_pil, "水印添加成功！"
         
     except Exception as e:
-        return image, f"处理失败：{str(e)}"
+        # 如果处理失败，返回转换后的原图
+        try:
+            converted_image = processor.load_and_convert_image(image)
+            return converted_image, f"处理失败：{str(e)}"
+        except:
+            return image, f"处理失败：{str(e)}"
 
 def create_gradio_interface():
     """
@@ -362,6 +435,49 @@ def create_gradio_interface():
                     type="pil",
                     sources=["upload", "clipboard"]
                 )
+                
+                # 添加 TIFF 专用上传组件
+                with gr.Row():
+                    tiff_file = gr.File(
+                        label="TIFF 文件上传 (如果上方预览失败，请使用此选项)",
+                        file_types=[".tif", ".tiff"],
+                        visible=False
+                    )
+                    show_tiff_uploader = gr.Button("🖼️ TIFF 专用上传", variant="secondary", size="sm")
+                
+                def toggle_tiff_uploader():
+                    return gr.update(visible=True)
+                
+                def process_tiff_file(file):
+                    if file is None:
+                        return None
+                    
+                    try:
+                        # 从文件路径加载 TIFF
+                        image = Image.open(file.name)
+                        converted_image = processor.load_and_convert_image(image)
+                        return converted_image
+                    except Exception as e:
+                        print(f"TIFF 文件处理错误：{e}")
+                        return None
+                
+                show_tiff_uploader.click(
+                    fn=toggle_tiff_uploader,
+                    outputs=[tiff_file]
+                )
+                
+                tiff_file.change(
+                    fn=process_tiff_file,
+                    inputs=[tiff_file],
+                    outputs=[input_image]
+                )
+                
+                # 添加格式说明
+                gr.Markdown("""
+                **支持的图片格式:** JPG, PNG, TIFF, BMP, WebP
+                
+                ⚠️ **注意:** TIFF 格式会自动转换为适合 Web 显示的格式
+                """)
                 
                 watermark_type = gr.Radio(
                     choices=["文字水印", "图片水印"], 
@@ -507,6 +623,9 @@ def create_gradio_interface():
                 return gr.update(value=temp_path, visible=True)
             return gr.update(visible=False)
         
+        # 删除预处理函数和相关事件处理器
+        # 图像转换在 process_watermark 函数中已经处理了
+
         # 处理按钮点击事件
         process_btn.click(
             fn=process_watermark,
@@ -522,6 +641,44 @@ def create_gradio_interface():
             outputs=[download_btn]
         )
         
+        def handle_image_upload(image):
+            """
+            处理图片上传，特别处理 TIFF 格式
+            """
+            if image is None:
+                return None
+            
+            try:
+                # 检查是否是 TIFF 格式或其他需要转换的格式
+                if hasattr(image, 'format') and image.format in ['TIFF', 'TIF']:
+                    print(f"检测到 TIFF 格式图像，正在转换...")
+                    converted_image = processor.load_and_convert_image(image)
+                    return converted_image
+                elif hasattr(image, 'mode') and image.mode in ['CMYK', 'L', 'P', '1']:
+                    print(f"检测到特殊格式图像 ({image.mode})，正在转换...")
+                    converted_image = processor.load_and_convert_image(image)
+                    return converted_image
+                else:
+                    # 其他格式直接返回
+                    return image
+                    
+            except Exception as e:
+                print(f"图像上传处理错误：{e}")
+                # 如果转换失败，尝试强制转换为 RGB
+                try:
+                    if hasattr(image, 'convert'):
+                        return image.convert('RGB')
+                except:
+                    pass
+                return image
+        
+        # 为图片上传添加处理事件
+        input_image.upload(
+            fn=handle_image_upload,
+            inputs=[input_image],
+            outputs=[input_image]
+        )
+
         # 示例
         gr.Markdown("""
         ## �� 使用说明
