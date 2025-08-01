@@ -22,7 +22,7 @@ source watermark_env/bin/activate
 echo "📦 检查依赖..."
 if ! python -c "import cv2, gradio, PIL, numpy" 2>/dev/null; then
     echo "📥 安装依赖包..."
-    pip install -r requirements.txt
+    pip3 install -r requirements.txt
 fi
 
 echo "🚀 启动应用..."
@@ -30,4 +30,4 @@ echo "💡 应用启动后请在浏览器中访问: http://localhost:7860"
 echo "⏹️ 按 Ctrl+C 停止应用"
 echo ""
 
-python watermark_app.py 
+python3 watermark_app.py 
