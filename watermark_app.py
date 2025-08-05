@@ -422,192 +422,422 @@ def create_gradio_interface():
     """
     创建 Gradio 界面
     """
-    with gr.Blocks(title="图片水印工具", theme=gr.themes.Soft()) as demo:
-        gr.Markdown("# 🎨 图片水印添加工具")
-        gr.Markdown("支持为图片添加文字或图片水印，支持多种参数调整")
+    # 自定义CSS样式
+    custom_css = """
+    .main-header {
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        color: white;
+    }
+    .section-header {
+        background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        color: white;
+        text-align: center;
+    }
+    .tips-box {
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #ff6b6b;
+        margin: 1rem 0;
+    }
+    .tips-box h3 {
+        color: #2d3436 !important;
+        font-weight: 600;
+        margin-top: 0;
+    }
+    .tips-box h4 {
+        color: #2d3436 !important;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    .tips-box li {
+        color: #2d3436 !important;
+        font-weight: 400;
+        line-height: 1.6;
+        margin-bottom: 0.3rem;
+    }
+    .control-group {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .quick-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin: 0.5rem 0;
+    }
+    /* 调整图片上传区域的高度和对齐 */
+    .image-upload-container {
+        min-height: 350px;
+    }
+    .image-preview-container {
+        min-height: 450px;
+    }
+    """
+    
+    with gr.Blocks(
+        title="图片水印工具", 
+        theme=gr.themes.Soft(
+            primary_hue="blue",
+            secondary_hue="pink",
+            neutral_hue="slate",
+            font=gr.themes.GoogleFont("Inter")
+        ),
+        css=custom_css
+    ) as demo:
         
+        # 主标题区域
         with gr.Row():
-            with gr.Column(scale=1):
-                # 输入区域
-                gr.Markdown("## 📁 输入设置")
-                input_image = gr.Image(
-                    label="上传图片", 
-                    type="pil",
-                    sources=["upload", "clipboard"]
-                )
-                
-                # 添加 TIFF 专用上传组件
-                with gr.Row():
-                    tiff_file = gr.File(
-                        label="TIFF 文件上传 (如果上方预览失败，请使用此选项)",
-                        file_types=[".tif", ".tiff"],
-                        visible=False
-                    )
-                    show_tiff_uploader = gr.Button("🖼️ TIFF 专用上传", variant="secondary", size="sm")
-                
-                def toggle_tiff_uploader():
-                    return gr.update(visible=True)
-                
-                def process_tiff_file(file):
-                    if file is None:
-                        return None
-                    
-                    try:
-                        # 从文件路径加载 TIFF
-                        image = Image.open(file.name)
-                        converted_image = processor.load_and_convert_image(image)
-                        return converted_image
-                    except Exception as e:
-                        print(f"TIFF 文件处理错误：{e}")
-                        return None
-                
-                show_tiff_uploader.click(
-                    fn=toggle_tiff_uploader,
-                    outputs=[tiff_file]
-                )
-                
-                tiff_file.change(
-                    fn=process_tiff_file,
-                    inputs=[tiff_file],
-                    outputs=[input_image]
-                )
-                
-                # 添加格式说明
-                gr.Markdown("""
-                **支持的图片格式:** JPG, PNG, TIFF, BMP, WebP
-                
-                ⚠️ **注意:** TIFF 格式会自动转换为适合 Web 显示的格式
+            with gr.Column():
+                gr.HTML("""
+                <div class="main-header">
+                    <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700;">
+                        🎨 图片水印添加工具
+                    </h1>
+                    <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.9;">
+                        专业的图片水印处理工具，支持文字和图片水印，多种样式自定义
+                    </p>
+                </div>
                 """)
+        
+        # 使用说明区域
+        with gr.Row():
+            with gr.Column():
+                gr.HTML("""
+                <div class="tips-box">
+                    <h3>📋 使用指南</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+                        <div>
+                            <h4>🚀 快速开始</h4>
+                            <ul style="margin: 0; padding-left: 1.2rem;">
+                                <li>上传您的图片文件</li>
+                                <li>选择水印类型（文字/图片）</li>
+                                <li>调整水印参数</li>
+                                <li>点击"添加水印"按钮</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4>💡 专业建议</h4>
+                            <ul style="margin: 0; padding-left: 1.2rem;">
+                                <li>透明度建议设置在 0.3-0.7</li>
+                                <li>使用重复模式可防止裁剪</li>
+                                <li>适当的倾斜角度更美观</li>
+                                <li>支持 JPG、PNG、TIFF 等格式</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                """)
+        
+        # 主要工作区域
+        with gr.Row(equal_height=True):
+            # 左侧控制面板
+            with gr.Column(scale=2):
+                gr.HTML('<div class="section-header"><h3 style="margin: 0;">⚙️ 控制面板</h3></div>')
                 
-                watermark_type = gr.Radio(
-                    choices=["文字水印", "图片水印"], 
-                    value="文字水印", 
-                    label="水印类型"
-                )
+                with gr.Group():
+                    gr.Markdown("### 📁 图片上传")
+                    input_image = gr.Image(
+                        label="选择图片文件", 
+                        type="pil",
+                        sources=["upload", "clipboard"],
+                        height=350,  # 增加高度
+                        elem_classes=["image-upload-container"]
+                    )
+                    
+                    # TIFF 专用上传（紧凑布局）
+                    with gr.Row():
+                        with gr.Column(scale=3):
+                            tiff_file = gr.File(
+                                label="TIFF 专用上传",
+                                file_types=[".tif", ".tiff"],
+                                visible=False,
+                                scale=2
+                            )
+                        with gr.Column(scale=1):
+                            show_tiff_uploader = gr.Button(
+                                "🖼️ TIFF", 
+                                variant="secondary", 
+                                size="sm"
+                            )
+                    
+                    gr.Markdown("""
+                    **支持格式:** JPG, PNG, TIFF, BMP, WebP  
+                    **提示:** TIFF 文件会自动转换为 Web 兼容格式
+                    """, elem_classes=["tips-text"])
+                
+                # 水印类型选择
+                with gr.Group():
+                    gr.Markdown("### 🎯 水印类型")
+                    watermark_type = gr.Radio(
+                        choices=["文字水印", "图片水印"], 
+                        value="文字水印", 
+                        label="选择类型",
+                        interactive=True
+                    )
                 
                 # 文字水印设置
                 with gr.Group(visible=True) as text_group:
-                    gr.Markdown("### ✏️ 文字水印设置")
+                    gr.Markdown("### ✏️ 文字水印配置")
+                    
                     text_content = gr.Textbox(
                         label="水印文字", 
-                        placeholder="请输入水印文字",
-                        value="测试水印"
+                        placeholder="输入您的水印文字...",
+                        value="WATERMARK",
+                        lines=2
                     )
                     
-                    # 添加快速选择按钮
+                    # 快速文字选择
+                    gr.Markdown("**快速选择:**")
                     with gr.Row():
-                        gr.Button("防盗用标记", size="sm").click(
-                            lambda: "防盗用标记", 
-                            outputs=[text_content]
+                        gr.Button("© 版权保护", size="sm").click(
+                            lambda: "© 版权保护", outputs=[text_content]
+                        )
+                        gr.Button("🚫 禁止盗用", size="sm").click(
+                            lambda: "🚫 禁止盗用", outputs=[text_content]
                         )
                         gr.Button("WATERMARK", size="sm").click(
-                            lambda: "WATERMARK", 
-                            outputs=[text_content]
+                            lambda: "WATERMARK", outputs=[text_content]
                         )
-                        gr.Button("版权所有", size="sm").click(
-                            lambda: "版权所有", 
-                            outputs=[text_content]
+                        gr.Button("SAMPLE", size="sm").click(
+                            lambda: "SAMPLE", outputs=[text_content]
                         )
-                    text_font_size = gr.Slider(
-                        minimum=10, maximum=200, value=30, 
-                        label="字体大小"
-                    )
-                    text_color = gr.ColorPicker(
-                        label="文字颜色", 
-                        value="#FF0000"  # 改为红色，更容易看见
-                    )
                     
-                    # 添加快速颜色选择
                     with gr.Row():
-                        gr.Button("🔴 红色", size="sm").click(
-                            lambda: "#FF0000", 
-                            outputs=[text_color]
+                        text_font_size = gr.Slider(
+                            minimum=10, maximum=200, value=40, 
+                            label="字体大小", step=5
                         )
-                        gr.Button("⚫ 黑色", size="sm").click(
-                            lambda: "#000000", 
-                            outputs=[text_color]
-                        )
-                        gr.Button("🔵 蓝色", size="sm").click(
-                            lambda: "#0000FF", 
-                            outputs=[text_color]
-                        )
-                        gr.Button("⚪ 白色", size="sm").click(
-                            lambda: "#FFFFFF", 
-                            outputs=[text_color]
+                        text_color = gr.ColorPicker(
+                            label="文字颜色", 
+                            value="#FF4757"
                         )
                     
-                    # 重复水印设置
+                    # 颜色快选
+                    gr.Markdown("**常用颜色:**")
+                    with gr.Row():
+                        gr.Button("🔴", size="sm").click(lambda: "#FF4757", outputs=[text_color])
+                        gr.Button("⚫", size="sm").click(lambda: "#2F3542", outputs=[text_color])
+                        gr.Button("🔵", size="sm").click(lambda: "#3742FA", outputs=[text_color])
+                        gr.Button("⚪", size="sm").click(lambda: "#F1F2F6", outputs=[text_color])
+                        gr.Button("🟡", size="sm").click(lambda: "#FFA502", outputs=[text_color])
+                        gr.Button("🟢", size="sm").click(lambda: "#2ED573", outputs=[text_color])
+                    
+                    # 重复模式设置
                     repeat_mode = gr.Checkbox(
-                        label="🔄 重复水印模式 (背景铺满)",
-                        value=True  # 默认开启重复模式
+                        label="🔄 重复水印模式（全图覆盖）",
+                        value=True,
+                        info="开启后水印将铺满整个图片"
                     )
                     
                     with gr.Row():
                         spacing_x = gr.Slider(
-                            minimum=50, maximum=500, value=150,  # 减小间距
-                            label="水平间距"
+                            minimum=50, maximum=400, value=150,
+                            label="水平间距", step=10
                         )
                         spacing_y = gr.Slider(
-                            minimum=50, maximum=300, value=80,   # 减小间距
-                            label="垂直间距"
+                            minimum=50, maximum=300, value=100,
+                            label="垂直间距", step=10
                         )
                 
                 # 图片水印设置
                 with gr.Group(visible=False) as image_group:
-                    gr.Markdown("### 🖼️ 图片水印设置")
+                    gr.Markdown("### 🖼️ 图片水印配置")
                     watermark_image = gr.Image(
                         label="水印图片", 
                         type="pil",
-                        sources=["upload"]
+                        sources=["upload"],
+                        height=200
                     )
                     scale = gr.Slider(
                         minimum=0.05, maximum=1.0, value=0.2, 
-                        label="水印大小比例"
+                        label="水印大小比例", step=0.05
                     )
                 
-                # 通用设置
-                gr.Markdown("### ⚙️ 通用设置")
-                with gr.Row():
-                    position_x = gr.Slider(
-                        minimum=0, maximum=2000, value=50, 
-                        label="水印 X 位置"
-                    )
-                    position_y = gr.Slider(
-                        minimum=0, maximum=2000, value=50, 
-                        label="水印 Y 位置"
-                    )
-                
-                with gr.Row():
-                    opacity = gr.Slider(
-                        minimum=0.1, maximum=1.0, value=0.3, step=0.1,  # 降低默认透明度
-                        label="透明度"
-                    )
-                    angle = gr.Slider(
-                        minimum=-180, maximum=180, value=-30,  # 默认倾斜角度
-                        label="倾斜角度 (度)"
-                    )
+                # 通用参数设置
+                with gr.Group():
+                    gr.Markdown("### 🎛️ 高级设置")
+                    
+                    with gr.Row():
+                        position_x = gr.Slider(
+                            minimum=0, maximum=2000, value=100, 
+                            label="水平位置 (px)", step=10
+                        )
+                        position_y = gr.Slider(
+                            minimum=0, maximum=2000, value=100, 
+                            label="垂直位置 (px)", step=10
+                        )
+                    
+                    with gr.Row():
+                        opacity = gr.Slider(
+                            minimum=0.1, maximum=1.0, value=0.4, step=0.05,
+                            label="透明度", 
+                            info="值越小越透明"
+                        )
+                        angle = gr.Slider(
+                            minimum=-180, maximum=180, value=-30, step=5,
+                            label="旋转角度 (°)",
+                            info="负值为逆时针"
+                        )
                 
                 # 处理按钮
-                process_btn = gr.Button("🎯 添加水印", variant="primary", size="lg")
+                with gr.Row():
+                    process_btn = gr.Button(
+                        "🎯 添加水印", 
+                        variant="primary", 
+                        size="lg",
+                        scale=2
+                    )
+                    gr.Button(
+                        "🔄 重置参数", 
+                        variant="secondary",
+                        size="lg",
+                        scale=1
+                    ).click(
+                        lambda: [
+                            "WATERMARK", 40, "#FF4757", True, 150, 100,
+                            100, 100, 0.4, -30, 0.2
+                        ],
+                        outputs=[
+                            text_content, text_font_size, text_color, repeat_mode,
+                            spacing_x, spacing_y, position_x, position_y,
+                            opacity, angle, scale
+                        ]
+                    )
             
-            with gr.Column(scale=1):
-                # 输出区域
-                gr.Markdown("## 📤 输出结果")
-                output_image = gr.Image(label="处理结果", type="pil")
-                status_text = gr.Textbox(label="状态信息", interactive=False)
+            # 右侧结果展示
+            with gr.Column(scale=2):
+                gr.HTML('<div class="section-header"><h3 style="margin: 0;">📤 处理结果</h3></div>')
                 
-                # 下载按钮
-                download_btn = gr.DownloadButton(
-                    "💾 下载图片", 
-                    variant="secondary"
-                )
+                with gr.Group():
+                    gr.Markdown("### 📤 水印效果预览")
+                    output_image = gr.Image(
+                        label="水印效果预览", 
+                        type="pil",
+                        height=350,  # 与左侧上传区域高度一致
+                        interactive=False,  # 禁止交互，只用于显示
+                        show_download_button=False,  # 移除下载按钮，使用下方的专用按钮
+                        elem_classes=["image-preview-container"]
+                    )
+                    
+                    status_text = gr.Textbox(
+                        label="处理状态", 
+                        interactive=False,
+                        max_lines=3
+                    )
+                    
+                    # 下载和分享按钮
+                    with gr.Row():
+                        download_btn = gr.DownloadButton(
+                            "💾 下载图片", 
+                            variant="primary",
+                            size="lg",
+                            scale=2
+                        )
+                        # gr.Button(
+                        #     "📋 复制链接", 
+                        #     variant="secondary",
+                        #     size="lg",
+                        #     scale=1
+                        # )
+                
+                # 处理信息面板
+                with gr.Group():
+                    gr.Markdown("### 📊 处理信息")
+                    info_display = gr.JSON(
+                        label="图片信息",
+                        visible=False
+                    )
         
-        # 事件处理
+        # 事件处理函数保持不变
+        def toggle_tiff_uploader():
+            return gr.update(visible=True)
+        
+        def process_tiff_file(file):
+            if file is None:
+                return None
+            
+            try:
+                image = Image.open(file.name)
+                converted_image = processor.load_and_convert_image(image)
+                return converted_image
+            except Exception as e:
+                print(f"TIFF 文件处理错误：{e}")
+                return None
+        
         def toggle_watermark_settings(watermark_type):
             if watermark_type == "文字水印":
                 return gr.update(visible=True), gr.update(visible=False)
             else:
                 return gr.update(visible=False), gr.update(visible=True)
+        
+        def update_download(result_image):
+            if result_image is not None:
+                temp_path = "watermarked_image.png"
+                result_image.save(temp_path)
+                return gr.update(value=temp_path, visible=True)
+            return gr.update(visible=False)
+        
+        def handle_image_upload(image):
+            if image is None:
+                return None, gr.update(visible=False)
+            
+            try:
+                if hasattr(image, 'format') and image.format in ['TIFF', 'TIF']:
+                    print(f"检测到 TIFF 格式图像，正在转换...")
+                    converted_image = processor.load_and_convert_image(image)
+                    info = {
+                        "格式": "TIFF (已转换)",
+                        "尺寸": f"{image.size[0]} x {image.size[1]}",
+                        "模式": image.mode
+                    }
+                    return converted_image, gr.update(value=info, visible=True)
+                elif hasattr(image, 'mode') and image.mode in ['CMYK', 'L', 'P', '1']:
+                    converted_image = processor.load_and_convert_image(image)
+                    info = {
+                        "格式": getattr(image, 'format', 'Unknown'),
+                        "尺寸": f"{image.size[0]} x {image.size[1]}",
+                        "模式": f"{image.mode} (已转换为RGB)"
+                    }
+                    return converted_image, gr.update(value=info, visible=True)
+                else:
+                    info = {
+                        "格式": getattr(image, 'format', 'Unknown'),
+                        "尺寸": f"{image.size[0]} x {image.size[1]}",
+                        "模式": image.mode
+                    }
+                    return image, gr.update(value=info, visible=True)
+                    
+            except Exception as e:
+                print(f"图像上传处理错误：{e}")
+                try:
+                    if hasattr(image, 'convert'):
+                        return image.convert('RGB'), gr.update(visible=False)
+                except:
+                    pass
+                return image, gr.update(visible=False)
+        
+        # 绑定事件
+        show_tiff_uploader.click(
+            fn=toggle_tiff_uploader,
+            outputs=[tiff_file]
+        )
+        
+        tiff_file.change(
+            fn=process_tiff_file,
+            inputs=[tiff_file],
+            outputs=[input_image]
+        )
         
         watermark_type.change(
             fn=toggle_watermark_settings,
@@ -615,18 +845,12 @@ def create_gradio_interface():
             outputs=[text_group, image_group]
         )
         
-        def update_download(result_image):
-            if result_image is not None:
-                # 保存临时文件
-                temp_path = "watermarked_image.png"
-                result_image.save(temp_path)
-                return gr.update(value=temp_path, visible=True)
-            return gr.update(visible=False)
+        input_image.upload(
+            fn=handle_image_upload,
+            inputs=[input_image],
+            outputs=[input_image, info_display]
+        )
         
-        # 删除预处理函数和相关事件处理器
-        # 图像转换在 process_watermark 函数中已经处理了
-
-        # 处理按钮点击事件
         process_btn.click(
             fn=process_watermark,
             inputs=[
@@ -640,64 +864,7 @@ def create_gradio_interface():
             inputs=[output_image],
             outputs=[download_btn]
         )
-        
-        def handle_image_upload(image):
-            """
-            处理图片上传，特别处理 TIFF 格式
-            """
-            if image is None:
-                return None
-            
-            try:
-                # 检查是否是 TIFF 格式或其他需要转换的格式
-                if hasattr(image, 'format') and image.format in ['TIFF', 'TIF']:
-                    print(f"检测到 TIFF 格式图像，正在转换...")
-                    converted_image = processor.load_and_convert_image(image)
-                    return converted_image
-                elif hasattr(image, 'mode') and image.mode in ['CMYK', 'L', 'P', '1']:
-                    print(f"检测到特殊格式图像 ({image.mode})，正在转换...")
-                    converted_image = processor.load_and_convert_image(image)
-                    return converted_image
-                else:
-                    # 其他格式直接返回
-                    return image
-                    
-            except Exception as e:
-                print(f"图像上传处理错误：{e}")
-                # 如果转换失败，尝试强制转换为 RGB
-                try:
-                    if hasattr(image, 'convert'):
-                        return image.convert('RGB')
-                except:
-                    pass
-                return image
-        
-        # 为图片上传添加处理事件
-        input_image.upload(
-            fn=handle_image_upload,
-            inputs=[input_image],
-            outputs=[input_image]
-        )
 
-        # 示例
-        gr.Markdown("""
-        ## �� 使用说明
-        1. **上传图片**: 支持 JPG、PNG、TIFF 等常见格式
-        2. **选择水印类型**: 文字水印或图片水印
-        3. **调整参数**: 
-           - 位置：调整水印在图片中的位置
-           - 透明度：控制水印的透明程度
-           - 角度：设置水印的倾斜角度
-           - 大小：(图片水印) 控制水印相对于原图的大小比例
-        4. **点击处理**: 生成带水印的图片
-        5. **下载结果**: 保存处理后的图片
-        
-        ## 💡 小贴士
-        - 建议水印透明度设置在 0.3-0.8 之间效果最佳
-        - 文字水印支持调整颜色和字体大小
-        - 图片水印会自动根据比例缩放
-        """)
-    
     return demo
 
 if __name__ == "__main__":

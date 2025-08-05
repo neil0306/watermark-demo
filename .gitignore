@@ -1,1 +1,9 @@
 watermark_env
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.ico
+watermarked_image.png
